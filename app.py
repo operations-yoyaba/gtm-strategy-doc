@@ -448,6 +448,53 @@ async def test_create_direct(request: Request):
         logger.error(f"Direct document creation test failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/test-simple-doc")
+async def test_simple_doc(request: Request):
+    """
+    Test creating a simple document without any template or complex logic
+    """
+    try:
+        body = await request.json()
+        logger.info("Testing simple document creation")
+        
+        if not google_docs_service:
+            raise HTTPException(status_code=500, detail="Google Docs service not available")
+        
+        try:
+            # Create a simple document directly in the root folder
+            doc_metadata = {
+                'name': 'Simple Test Document',
+                'mimeType': 'application/vnd.google-apps.document',
+                'parents': [google_docs_service.root_folder_id]
+            }
+            
+            doc = google_docs_service.drive_service.files().create(
+                body=doc_metadata,
+                fields='id,name'
+            ).execute()
+            
+            doc_id = doc['id']
+            doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
+            
+            return {
+                "status": "success",
+                "doc_url": doc_url,
+                "doc_id": doc_id,
+                "message": "Simple document created successfully"
+            }
+            
+        except Exception as e:
+            logger.error(f"Simple document creation failed: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to create simple document"
+            }
+        
+    except Exception as e:
+        logger.error(f"Simple document creation test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/")
 async def root():
     """
