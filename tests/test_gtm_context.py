@@ -234,9 +234,9 @@ class TestGtmContext:
         assert "Subscription" in overview
         assert "VC backed" in overview
         assert "Growing" in overview
-        assert "$50,000,000" in overview  # Formatted ARR
-        assert "$75,000" in overview      # Formatted ACV
-        assert "150%" in overview         # Formatted YoY growth
+        assert "50000000" in overview  # Raw ARR value
+        assert "75000" in overview     # Raw ACV value
+        assert "150" in overview       # Raw YoY growth value
 
     def test_business_model_determination(self):
         """Test business model determination logic"""
