@@ -254,6 +254,44 @@ async def get_job_status(response_id: str):
         "error": job_data.get("error")
     }
 
+@app.post("/test-google-drive")
+async def test_google_drive(request: Request):
+    """
+    Test Google Drive service directly without OpenAI
+    """
+    try:
+        body = await request.json()
+        
+        # Extract test data
+        company_id = str(body.get("companyId", "99999"))
+        company_domain = body.get("company", {}).get("domain", "test.com")
+        dummy_research = body.get("dummy_research_result", {})
+        
+        logger.info(f"Testing Google Drive with company: {company_id}-{company_domain}")
+        
+        if not google_docs_service:
+            raise HTTPException(status_code=500, detail="Google Docs service not available")
+        
+        # Test Google Drive creation
+        doc_url, revision_id = await google_docs_service.create_doc_from_template(
+            research_result=dummy_research,
+            gtm_context={"test": True},
+            company_id=company_id,
+            company_domain=company_domain
+        )
+        
+        return {
+            "status": "success",
+            "doc_url": doc_url,
+            "folder_name": f"{company_id}-{company_domain}",
+            "revision_id": revision_id,
+            "message": "Google Drive test completed successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Google Drive test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/health")
 async def health_check():
     """
