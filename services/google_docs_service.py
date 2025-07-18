@@ -202,16 +202,38 @@ class GoogleDocsService:
             # Create document name
             doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
             
-            # Copy the template (regular Drive folder)
-            copied_file = self.drive_service.files().copy(
-                fileId=self.template_doc_id,
-                body={
-                    'name': doc_name,
-                    'parents': [client_folder_id]
-                }
-            ).execute()
-            
-            doc_id = copied_file['id']
+            # Try to copy the template first
+            try:
+                copied_file = self.drive_service.files().copy(
+                    fileId=self.template_doc_id,
+                    body={
+                        'name': doc_name,
+                        'parents': [client_folder_id]
+                    }
+                ).execute()
+                
+                doc_id = copied_file['id']
+                logger.info(f"Successfully copied template to create document: {doc_name} (ID: {doc_id})")
+                
+            except HttpError as e:
+                if "storageQuotaExceeded" in str(e):
+                    logger.warning(f"Template copy failed due to quota, creating empty document instead: {e}")
+                    # Fallback: Create empty document
+                    doc_metadata = {
+                        'name': doc_name,
+                        'mimeType': 'application/vnd.google-apps.document',
+                        'parents': [client_folder_id]
+                    }
+                    
+                    doc = self.drive_service.files().create(
+                        body=doc_metadata,
+                        fields='id'
+                    ).execute()
+                    
+                    doc_id = doc['id']
+                    logger.info(f"Created empty document as fallback: {doc_name} (ID: {doc_id})")
+                else:
+                    raise
             
             # Share document with operations@yoyaba.com
             self.drive_service.permissions().create(
