@@ -551,6 +551,57 @@ async def test_shared_drive_access(request: Request):
         logger.error(f"Shared Drive access test failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/test-shared-drive-write")
+async def test_shared_drive_write(request: Request):
+    """
+    Test creating a document directly in Shared Drive
+    """
+    try:
+        body = await request.json()
+        logger.info("Testing Shared Drive write access")
+        
+        if not google_docs_service:
+            raise HTTPException(status_code=500, detail="Google Docs service not available")
+        
+        try:
+            # Create a simple document directly in the Shared Drive
+            shared_drive_id = body.get("shared_drive_id", "0AC3eBtdW1kwVUk9PVA")
+            
+            doc_metadata = {
+                'name': 'Test Document in Shared Drive',
+                'mimeType': 'application/vnd.google-apps.document',
+                'parents': [shared_drive_id]
+            }
+            
+            doc = google_docs_service.drive_service.files().create(
+                body=doc_metadata,
+                fields='id,name',
+                supportsAllDrives=True
+            ).execute()
+            
+            doc_id = doc['id']
+            doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
+            
+            return {
+                "status": "success",
+                "doc_url": doc_url,
+                "doc_id": doc_id,
+                "shared_drive_id": shared_drive_id,
+                "message": "Document created successfully in Shared Drive"
+            }
+            
+        except Exception as e:
+            logger.error(f"Shared Drive write test failed: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to create document in Shared Drive"
+            }
+        
+    except Exception as e:
+        logger.error(f"Shared Drive write test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/")
 async def root():
     """
