@@ -292,6 +292,24 @@ async def test_google_drive(request: Request):
         logger.error(f"Google Drive test failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/")
+async def root():
+    """
+    Root endpoint with API information
+    """
+    return {
+        "name": "GTM Strategy Document Generator",
+        "version": "1.0.0",
+        "description": "Webhook-based GTM strategy document generation system",
+        "endpoints": {
+            "submit_job": "POST /generate",
+            "webhook": "POST /webhook/openai",
+            "job_status": "GET /job-status/{response_id}",
+            "test_google_drive": "POST /test-google-drive",
+            "health": "GET /health"
+        }
+    }
+
 @app.get("/health")
 async def health_check():
     """
