@@ -16,16 +16,40 @@ class GoogleDocsService:
         self.operations_email = "operations@yoyaba.com"
         
         # Initialize Google Docs API client
-        credentials = service_account.Credentials.from_service_account_file(
-            os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-            scopes=[
-                'https://www.googleapis.com/auth/documents',
-                'https://www.googleapis.com/auth/drive'
-            ]
-        )
+        credentials = self._get_credentials()
         
         self.docs_service = build('docs', 'v1', credentials=credentials)
         self.drive_service = build('drive', 'v3', credentials=credentials)
+
+    def _get_credentials(self):
+        """Get Google credentials from Secret Manager or local file"""
+        try:
+            # Try to get credentials from Secret Manager first
+            import google.cloud.secretmanager as secretmanager
+            
+            client = secretmanager.SecretManagerServiceClient()
+            name = f"projects/yoyaba-db/secrets/google-service-account-key/versions/latest"
+            response = client.access_secret_version(request={"name": name})
+            service_account_info = json.loads(response.payload.data.decode("UTF-8"))
+            
+            return service_account.Credentials.from_service_account_info(
+                service_account_info,
+                scopes=[
+                    'https://www.googleapis.com/auth/documents',
+                    'https://www.googleapis.com/auth/drive'
+                ]
+            )
+        except Exception as e:
+            logger.warning(f"Failed to get credentials from Secret Manager: {e}")
+            # Fallback to local file
+            credentials = service_account.Credentials.from_service_account_file(
+                os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+                scopes=[
+                    'https://www.googleapis.com/auth/documents',
+                    'https://www.googleapis.com/auth/drive'
+                ]
+            )
+            return credentials
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def create_doc_from_template(self, research_result: Dict[str, str], gtm_context: Dict[str, Any] = None, 
