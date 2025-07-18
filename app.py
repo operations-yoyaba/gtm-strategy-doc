@@ -15,6 +15,13 @@ from fastapi.responses import Response
 import openai
 from openai import InvalidWebhookSignatureError
 
+# Google Cloud Secret Manager
+try:
+    from google.cloud import secretmanager
+    secret_manager_available = True
+except ImportError:
+    secret_manager_available = False
+
 from services.openai_service import OpenAIService
 from services.google_docs_service import GoogleDocsService
 from models.gtm_context import GenerateRequest
@@ -26,17 +33,30 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def get_secret(secret_name: str, fallback_env_var: str = None) -> str:
+    """
+    Get secret from Google Secret Manager or fallback to environment variable
+    """
+    if secret_manager_available:
+        try:
+            client = secretmanager.SecretManagerServiceClient()
+            name = f"projects/yoyaba-db/secrets/{secret_name}/versions/latest"
+            response = client.access_secret_version(request={"name": name})
+            return response.payload.data.decode("UTF-8")
+        except Exception as e:
+            logger.warning(f"Failed to get secret {secret_name} from Secret Manager: {e}")
+    
+    # Fallback to environment variable
+    if fallback_env_var:
+        return os.getenv(fallback_env_var)
+    
+    return None
+
 # Initialize FastAPI app
 app = FastAPI(
     title="GTM Strategy Document Generator",
     description="Webhook-based GTM strategy document generation system",
     version="1.0.0"
-)
-
-# Initialize OpenAI client with webhook secret
-client = openai.OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    webhook_secret=os.getenv("OPENAI_WEBHOOK_SECRET")
 )
 
 # Initialize services
@@ -65,6 +85,14 @@ async def generate_gtm_doc(request: GenerateRequest, background_tasks: Backgroun
     """
     try:
         logger.info(f"Received GTM document generation request for company: {request.company.get('name', 'Unknown')}")
+        
+        # Get secrets
+        openai_api_key = get_secret("OPENAI_API_KEY", "OPENAI_API_KEY")
+        if not openai_api_key:
+            raise HTTPException(status_code=500, detail="OpenAI API key not available")
+        
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=openai_api_key)
         
         # Prepare raw data
         raw_data = {
@@ -125,6 +153,19 @@ async def handle_openai_webhook(request: Request, background_tasks: BackgroundTa
     Handle OpenAI webhook events, specifically response.completed
     """
     try:
+        # Get secrets
+        openai_api_key = get_secret("OPENAI_API_KEY", "OPENAI_API_KEY")
+        openai_webhook_secret = get_secret("openai-webhook-secret", "OPENAI_WEBHOOK_SECRET")
+        
+        if not openai_api_key or not openai_webhook_secret:
+            raise HTTPException(status_code=500, detail="Required secrets not available")
+        
+        # Initialize OpenAI client with webhook secret
+        client = openai.OpenAI(
+            api_key=openai_api_key,
+            webhook_secret=openai_webhook_secret
+        )
+        
         # Get raw body for signature verification
         body = await request.body()
         headers = dict(request.headers)
@@ -162,6 +203,15 @@ async def process_completed_response(response_id: str):
     """
     try:
         logger.info(f"Processing response {response_id}")
+        
+        # Get secrets
+        openai_api_key = get_secret("OPENAI_API_KEY", "OPENAI_API_KEY")
+        if not openai_api_key:
+            logger.error("OpenAI API key not available")
+            return
+        
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=openai_api_key)
         
         # Retrieve the completed response from OpenAI
         response = client.responses.retrieve(response_id)
@@ -261,9 +311,10 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "services": {
-            "openai": "configured",
+            "openai": "configured" if openai_api_key else "missing",
             "google_docs": "available" if google_docs_available else "unavailable",
-            "webhook_secret": "configured" if os.getenv("OPENAI_WEBHOOK_SECRET") else "missing"
+            "webhook_secret": "configured" if openai_webhook_secret else "missing",
+            "secret_manager": "available" if secret_manager_available else "unavailable"
         }
     }
 
