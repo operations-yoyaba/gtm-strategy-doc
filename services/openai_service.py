@@ -15,7 +15,16 @@ logger = logging.getLogger(__name__)
 
 class OpenAIService:
     def __init__(self):
-        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = None  # Initialize client when needed
+    
+    def _get_client(self):
+        """Get OpenAI client, initializing if needed"""
+        if self.client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY environment variable not set")
+            self.client = openai.OpenAI(api_key=api_key)
+        return self.client
 
     def count_tokens(self, text: str) -> int:
         """Count tokens in text using OpenAI's tokenizer"""
@@ -189,7 +198,8 @@ Return the analysis as a JSON object with the exact keys specified above.
 
         try:
             # Use the Responses API for deep research
-            response = self.client.responses.create(
+            client = self._get_client()
+            response = client.responses.create(
                 model="o3-deep-research",
                 input=research_input,
                 tools=[
@@ -332,7 +342,8 @@ IMPORTANT INSTRUCTIONS:
 Return ONLY the JSON object, no additional text or explanation."""
 
         try:
-            response = self.client.chat.completions.create(
+            client = self._get_client()
+            response = client.chat.completions.create(
                 model="o3",
                 temperature=0.1,  # Low temperature for consistent structuring
                 messages=[
@@ -433,7 +444,8 @@ Definitions:
     async def analyze_icp_data(self, icp_data: str) -> str:
         """Additional analysis of ICP data"""
         try:
-            response = self.client.chat.completions.create(
+            client = self._get_client()
+            response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 temperature=0.3,
                 messages=[
@@ -453,7 +465,8 @@ Definitions:
     async def analyze_business_model(self, business_model_data: str) -> str:
         """Additional analysis of business model data"""
         try:
-            response = self.client.chat.completions.create(
+            client = self._get_client()
+            response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 temperature=0.3,
                 messages=[
@@ -509,7 +522,8 @@ Definitions:
         Optional second pass to polish content and unify tone
         """
         try:
-            response = self.client.chat.completions.create(
+            client = self._get_client()
+            response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 temperature=0.3,
                 messages=[

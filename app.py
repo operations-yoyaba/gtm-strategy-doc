@@ -307,6 +307,10 @@ async def health_check():
     """
     Health check endpoint
     """
+    # Get secrets dynamically
+    openai_api_key = get_secret("OPENAI_API_KEY", "OPENAI_API_KEY")
+    openai_webhook_secret = get_secret("openai-webhook-secret", "OPENAI_WEBHOOK_SECRET")
+    
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
