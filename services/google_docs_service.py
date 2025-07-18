@@ -26,6 +26,18 @@ class GoogleDocsService:
             about = self.drive_service.about().get(fields="user").execute()
             user = about.get('user', {})
             logger.info(f"👤 Authenticated as: {user.get('displayName', 'N/A')} ({user.get('emailAddress', 'N/A')})")
+            
+            # Also test access to the root folder
+            try:
+                root_folder = self.drive_service.files().get(
+                    fileId=self.root_folder_id,
+                    fields='id, name, permissions'
+                ).execute()
+                logger.info(f"✅ Can access root folder: {root_folder.get('name', 'N/A')}")
+            except Exception as e:
+                logger.error(f"❌ Cannot access root folder {self.root_folder_id}: {e}")
+                raise Exception(f"Cannot access root folder: {e}")
+                
         except Exception as e:
             logger.warning(f"Could not verify authentication: {e}")
             raise Exception(f"Authentication verification failed: {e}")
@@ -140,15 +152,12 @@ class GoogleDocsService:
             # Create folder name
             folder_name = f"{company_id}-{company_domain}"
             
-            # Check if folder already exists (with Shared Drive support)
+            # Check if folder already exists (regular Drive folder)
             query = f"name='{folder_name}' and '{self.root_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'"
             results = self.drive_service.files().list(
                 q=query,
                 spaces='drive',
-                fields='files(id, name)',
-                corpora='drive',
-                includeItemsFromAllDrives=True,
-                supportsAllDrives=True
+                fields='files(id, name)'
             ).execute()
             
             if results.get('files'):
@@ -166,8 +175,7 @@ class GoogleDocsService:
                 
                 folder = self.drive_service.files().create(
                     body=folder_metadata,
-                    fields='id',
-                    supportsAllDrives=True
+                    fields='id'
                 ).execute()
                 
                 folder_id = folder['id']
@@ -195,14 +203,13 @@ class GoogleDocsService:
             # Create document name
             doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
             
-            # Copy the template (with Shared Drive support)
+            # Copy the template (regular Drive folder)
             copied_file = self.drive_service.files().copy(
                 fileId=self.template_doc_id,
                 body={
                     'name': doc_name,
                     'parents': [client_folder_id]
-                },
-                supportsAllDrives=True
+                }
             ).execute()
             
             doc_id = copied_file['id']
