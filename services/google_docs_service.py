@@ -249,7 +249,8 @@ class GoogleDocsService:
                     'name': doc_name,
                     'parents': [client_folder_id]
                 },
-                supportsAllDrives=True
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True
             ).execute()
             
             doc_id = copied_file['id']
