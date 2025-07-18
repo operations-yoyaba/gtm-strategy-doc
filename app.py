@@ -509,6 +509,9 @@ async def root():
             "webhook": "POST /webhook/openai",
             "job_status": "GET /job-status/{response_id}",
             "test_google_drive": "POST /test-google-drive",
+            "test_template_access": "POST /test-template-access",
+            "test_create_direct": "POST /test-create-direct",
+            "test_simple_doc": "POST /test-simple-doc",
             "health": "GET /health"
         }
     }
