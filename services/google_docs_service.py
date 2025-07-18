@@ -108,7 +108,6 @@ class GoogleDocsService:
         
         raise Exception("All authentication methods failed. Check service account setup and permissions.")
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def create_doc_from_template(self, research_result: Dict[str, str], gtm_context: Dict[str, Any] = None, 
                                      company_id: str = None, company_domain: str = None) -> Tuple[str, str]:
         """
