@@ -127,7 +127,39 @@ class GoogleDocsService:
             client_folder_id = await self._get_or_create_client_folder(company_id, company_domain)
             
             # Step 2: Copy template to new document in client folder
-            doc_id = await self._copy_template(client_folder_id, company_id, company_domain)
+            try:
+                doc_id = await self._copy_template(client_folder_id, company_id, company_domain)
+            except HttpError as e:
+                if "storageQuotaExceeded" in str(e):
+                    logger.warning(f"Template copy failed due to quota, creating empty document instead: {e}")
+                    # Fallback: Create empty document
+                    doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
+                    doc_metadata = {
+                        'name': doc_name,
+                        'mimeType': 'application/vnd.google-apps.document',
+                        'parents': [client_folder_id]
+                    }
+                    
+                    doc = self.drive_service.files().create(
+                        body=doc_metadata,
+                        fields='id'
+                    ).execute()
+                    
+                    doc_id = doc['id']
+                    
+                    # Share document with operations@yoyaba.com
+                    self.drive_service.permissions().create(
+                        fileId=doc_id,
+                        body={
+                            'type': 'user',
+                            'role': 'writer',
+                            'emailAddress': self.operations_email
+                        }
+                    ).execute()
+                    
+                    logger.info(f"Created empty document as fallback: {doc_name} (ID: {doc_id})")
+                else:
+                    raise
             
             # Step 3: Replace all placeholders with content
             revision_id = await self._replace_content(doc_id, research_result)
@@ -202,38 +234,17 @@ class GoogleDocsService:
             # Create document name
             doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
             
-            # Try to copy the template first
-            try:
-                copied_file = self.drive_service.files().copy(
-                    fileId=self.template_doc_id,
-                    body={
-                        'name': doc_name,
-                        'parents': [client_folder_id]
-                    }
-                ).execute()
-                
-                doc_id = copied_file['id']
-                logger.info(f"Successfully copied template to create document: {doc_name} (ID: {doc_id})")
-                
-            except HttpError as e:
-                if "storageQuotaExceeded" in str(e):
-                    logger.warning(f"Template copy failed due to quota, creating empty document instead: {e}")
-                    # Fallback: Create empty document
-                    doc_metadata = {
-                        'name': doc_name,
-                        'mimeType': 'application/vnd.google-apps.document',
-                        'parents': [client_folder_id]
-                    }
-                    
-                    doc = self.drive_service.files().create(
-                        body=doc_metadata,
-                        fields='id'
-                    ).execute()
-                    
-                    doc_id = doc['id']
-                    logger.info(f"Created empty document as fallback: {doc_name} (ID: {doc_id})")
-                else:
-                    raise
+            # Copy the template
+            copied_file = self.drive_service.files().copy(
+                fileId=self.template_doc_id,
+                body={
+                    'name': doc_name,
+                    'parents': [client_folder_id]
+                }
+            ).execute()
+            
+            doc_id = copied_file['id']
+            logger.info(f"Successfully copied template to create document: {doc_name} (ID: {doc_id})")
             
             # Share document with operations@yoyaba.com
             self.drive_service.permissions().create(
