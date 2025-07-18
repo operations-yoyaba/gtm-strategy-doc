@@ -13,6 +13,7 @@ class GoogleDocsService:
     def __init__(self):
         self.template_doc_id = os.getenv("GS_TEMPLATE_DOC_ID")
         self.root_folder_id = os.getenv("GS_DRIVE_FOLDER_ID")  # Root folder for all GTM docs
+        self.shared_drive_id = os.getenv("GS_SHARED_DRIVE_ID")  # Shared Drive ID for GTM docs
         self.operations_email = "operations@yoyaba.com"
         
         # Initialize Google Docs API client
@@ -131,7 +132,7 @@ class GoogleDocsService:
             except HttpError as e:
                 if "storageQuotaExceeded" in str(e):
                     logger.warning(f"Template copy failed due to quota, creating empty document instead: {e}")
-                    # Fallback: Create empty document
+                    # Fallback: Create empty document in Shared Drive
                     doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
                     doc_metadata = {
                         'name': doc_name,
@@ -141,7 +142,8 @@ class GoogleDocsService:
                     
                     doc = self.drive_service.files().create(
                         body=doc_metadata,
-                        fields='id'
+                        fields='id',
+                        supportsAllDrives=True
                     ).execute()
                     
                     doc_id = doc['id']
@@ -153,7 +155,8 @@ class GoogleDocsService:
                             'type': 'user',
                             'role': 'writer',
                             'emailAddress': self.operations_email
-                        }
+                        },
+                        supportsAllDrives=True
                     ).execute()
                     
                     logger.info(f"Created empty document as fallback: {doc_name} (ID: {doc_id})")
@@ -178,15 +181,19 @@ class GoogleDocsService:
             raise
 
     async def _get_or_create_client_folder(self, company_id: str, company_domain: str) -> str:
-        """Get or create a folder for the specific client"""
+        """Get or create a folder for the specific client in Shared Drive"""
         try:
             # Create folder name
             folder_name = f"{company_id}-{company_domain}"
             
-            # Check if folder already exists (regular Drive folder)
-            query = f"name='{folder_name}' and '{self.root_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'"
+            # Check if folder already exists in Shared Drive
+            query = f"name='{folder_name}' and '{self.shared_drive_id}' in parents and mimeType='application/vnd.google-apps.folder'"
             results = self.drive_service.files().list(
                 q=query,
+                corpora='drive',
+                driveId=self.shared_drive_id,
+                includeItemsFromAllDrives=True,
+                supportsAllDrives=True,
                 fields='files(id, name)'
             ).execute()
             
@@ -196,16 +203,17 @@ class GoogleDocsService:
                 logger.info(f"Found existing client folder: {folder_name}")
                 return folder_id
             else:
-                # Create new folder
+                # Create new folder in Shared Drive
                 folder_metadata = {
                     'name': folder_name,
                     'mimeType': 'application/vnd.google-apps.folder',
-                    'parents': [self.root_folder_id]
+                    'parents': [self.shared_drive_id]
                 }
                 
                 folder = self.drive_service.files().create(
                     body=folder_metadata,
-                    fields='id'
+                    fields='id',
+                    supportsAllDrives=True
                 ).execute()
                 
                 folder_id = folder['id']
@@ -217,10 +225,11 @@ class GoogleDocsService:
                         'type': 'user',
                         'role': 'writer',
                         'emailAddress': self.operations_email
-                    }
+                    },
+                    supportsAllDrives=True
                 ).execute()
                 
-                logger.info(f"Created new client folder: {folder_name} (ID: {folder_id})")
+                logger.info(f"Created new client folder in Shared Drive: {folder_name} (ID: {folder_id})")
                 return folder_id
                 
         except HttpError as e:
@@ -233,17 +242,18 @@ class GoogleDocsService:
             # Create document name
             doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
             
-            # Copy the template
+            # Copy the template to Shared Drive
             copied_file = self.drive_service.files().copy(
                 fileId=self.template_doc_id,
                 body={
                     'name': doc_name,
                     'parents': [client_folder_id]
-                }
+                },
+                supportsAllDrives=True
             ).execute()
             
             doc_id = copied_file['id']
-            logger.info(f"Successfully copied template to create document: {doc_name} (ID: {doc_id})")
+            logger.info(f"Successfully copied template to create document in Shared Drive: {doc_name} (ID: {doc_id})")
             
             # Share document with operations@yoyaba.com
             self.drive_service.permissions().create(
@@ -252,10 +262,11 @@ class GoogleDocsService:
                     'type': 'user',
                     'role': 'writer',
                     'emailAddress': self.operations_email
-                }
+                },
+                supportsAllDrives=True
             ).execute()
             
-            logger.info(f"Created document: {doc_name} (ID: {doc_id})")
+            logger.info(f"Created document in Shared Drive: {doc_name} (ID: {doc_id})")
             return doc_id
             
         except HttpError as e:
@@ -341,10 +352,11 @@ class GoogleDocsService:
                 'mimeType': 'application/json'
             }
             
-            # Upload the JSON file
+            # Upload the JSON file to Shared Drive
             self.drive_service.files().create(
                 body=file_metadata,
-                media_body=json.dumps(json_content, indent=2)
+                media_body=json.dumps(json_content, indent=2),
+                supportsAllDrives=True
             ).execute()
             
             logger.info(f"Stored JSON file for doc {doc_id}")

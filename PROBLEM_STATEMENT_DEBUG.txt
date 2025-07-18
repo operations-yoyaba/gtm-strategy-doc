@@ -1,0 +1,198 @@
+GTM STRATEGY DOC GENERATOR - PROBLEM STATEMENT & DEBUG INFO
+================================================================
+
+PROJECT OVERVIEW
+================
+We're building an automated GTM strategy document generation system that:
+1. Receives webhooks from HubSpot when deal stages change
+2. Enriches company data via Clay and HubSpot APIs
+3. Uses OpenAI's deep research model to analyze and generate comprehensive GTM strategy documents
+4. Creates Google Docs with inline citations and professional formatting
+5. Stores metadata for future iterations
+
+CURRENT AUTHENTICATION SETUP
+============================
+
+Service Account Configuration:
+- Email: gtm-strategy-doc-sa@yoyaba-db.iam.gserviceaccount.com
+- Project: yoyaba-db
+- Authentication Method: Service Account Key (JSON file)
+
+Secret Management:
+- Secret Name: google-service-account-key
+- Location: Google Secret Manager
+- Fallback: Environment variable GOOGLE_APPLICATION_CREDENTIALS
+- Access: Cloud Run service has permission to access this secret
+
+Required Scopes:
+- https://www.googleapis.com/auth/drive (Full access to Drive files)
+- https://www.googleapis.com/auth/documents (Access to Google Docs content)
+
+Authentication Flow:
+HubSpot Webhook → Cloud Run Service → Google Secret Manager → Service Account Key → Google Drive API
+
+GOOGLE DRIVE INTEGRATION DETAILS
+================================
+
+Template Document:
+- ID: 10y-Uq7GteOunKfY03dtVF0pne4fWkl7qK2vChbG8xiM
+- Owner: operations@yoyaba.com
+- Purpose: Contains placeholders like {{DOC_TITLE}}, {{INTRO}}, {{PRICING_PACKAGING}}, etc.
+
+Client Folder Structure:
+Root Folder (shared with service account)
+└── {companyId}-{companyDomain}/
+    ├── {companyId}-{companyDomain} - GTM Strategy Doc
+    └── metadata.json
+
+Document Creation Process:
+1. Get or create client folder
+2. Copy template to new document in client folder
+3. Replace placeholders with content
+4. Store metadata for future iterations
+
+CURRENT STATUS
+==============
+
+✅ WORKING:
+- Authentication is working correctly
+- Secret management is properly configured
+- API access with correct scopes
+- Folder operations (can create and access folders)
+- Fallback logic implemented (but not triggering)
+
+❌ FAILING:
+- Template document copy operation
+- Error: "The user's Drive storage quota has been exceeded"
+
+THE SPECIFIC PROBLEM
+====================
+
+Error Details:
+HttpError 403 when requesting https://www.googleapis.com/drive/v3/files/10y-Uq7GteOunKfY03dtVF0pne4fWkl7qK2vChbG8xiM/copy?alt=json 
+returned "The user's Drive storage quota has been exceeded."
+
+What's Happening:
+1. Service account successfully authenticates ✅
+2. Service account can access root folder ✅
+3. Service account can create client folders ✅
+4. BUT when trying to copy template document, hits quota limit ❌
+
+Root Cause Analysis:
+The error occurs when copying from operations@yoyaba.com to gtm-strategy-doc-sa@yoyaba-db.iam.gserviceaccount.com
+This is a cross-account copy operation that hits specific Google Drive quota limitations.
+
+POTENTIAL QUOTA ISSUES
+======================
+
+1. Cross-Account Copy Quotas:
+   - Google Drive has limits on copying between different Google accounts
+   - Service account copying from user account may have different limits
+
+2. Daily Upload/Copy Limits:
+   - Google Drive has daily limits on file operations
+   - May be hitting daily copy quota
+
+3. Service Account Specific Quotas:
+   - Service accounts may have their own quota limits
+   - Separate from API quotas (which show low usage)
+
+4. Template Document Ownership:
+   - Template owned by operations@yoyaba.com
+   - Service account trying to copy from different account
+   - May trigger additional quota restrictions
+
+RECOMMENDED SOLUTIONS
+=====================
+
+Option 1: Transfer Template Ownership (RECOMMENDED)
+- Transfer ownership of template document to service account
+- Eliminates cross-account copy issues
+- Steps:
+  1. Go to template document: https://docs.google.com/document/d/10y-Uq7GteOunKfY03dtVF0pne4fWkl7qK2vChbG8xiM/edit
+  2. Click "Share"
+  3. Add gtm-strategy-doc-sa@yoyaba-db.iam.gserviceaccount.com with Editor permissions
+  4. Click dropdown next to service account → Transfer ownership
+
+Option 2: Wait for Quota Reset
+- Google Drive quotas typically reset daily
+- Wait 24 hours and try again
+- Check if there are pending quota resets
+
+Option 3: Use Different Service Account
+- Create new service account with fresh quotas
+- Update deployment with new service account
+
+Option 4: Bypass Template Copy (Current Fallback)
+- We've implemented fallback to create empty documents
+- Not triggering due to retry mechanism
+- Would need to modify retry logic
+
+TECHNICAL DETAILS FOR DEVELOPERS
+================================
+
+Code Location: services/google_docs_service.py
+Method: _copy_template()
+Error Handling: Implemented in create_doc_from_template() but not triggering
+
+Current Fallback Logic:
+```python
+try:
+    doc_id = await self._copy_template(client_folder_id, company_id, company_domain)
+except HttpError as e:
+    if "storageQuotaExceeded" in str(e):
+        # Create empty document as fallback
+        # ... fallback logic ...
+    else:
+        raise
+```
+
+Issue: The @retry decorator on create_doc_from_template() is preventing the fallback from triggering.
+
+Deployment Status:
+- Cloud Run service: gtm-strategy-doc-areezn3awa-uc.a.run.app
+- Latest revision deployed successfully
+- All endpoints available except new test endpoints
+
+TESTING COMMANDS
+================
+
+Test Google Drive Service:
+```bash
+python3 test_google_drive_only.py
+```
+
+Test Simple Document Creation:
+```bash
+python3 test_simple_doc.py
+```
+
+Check Service Health:
+```bash
+curl https://gtm-strategy-doc-areezn3awa-uc.a.run.app/health
+```
+
+Check Logs:
+```bash
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=gtm-strategy-doc" --limit=5
+```
+
+NEXT STEPS FOR DEVELOPMENT TEAM
+===============================
+
+1. IMMEDIATE: Transfer template document ownership to service account
+2. TEST: Verify document creation works after ownership transfer
+3. MONITOR: Check if quota issues persist
+4. ALTERNATIVE: If ownership transfer doesn't work, implement proper fallback logic
+5. PRODUCTION: Test full webhook flow end-to-end
+
+The system is architecturally sound - we just need to resolve the quota issue to make it fully functional.
+
+CONTACT INFO
+============
+Service Account: gtm-strategy-doc-sa@yoyaba-db.iam.gserviceaccount.com
+Template Owner: operations@yoyaba.com
+Root Folder: Shared with service account for client folder creation
+
+Last Updated: 2025-07-18
+Status: Blocked on Google Drive quota issue 
