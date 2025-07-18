@@ -495,6 +495,62 @@ async def test_simple_doc(request: Request):
         logger.error(f"Simple document creation test failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/test-shared-drive-access")
+async def test_shared_drive_access(request: Request):
+    """
+    Test access to Shared Drive and template document
+    """
+    try:
+        body = await request.json()
+        logger.info("Testing Shared Drive access")
+        
+        if not google_docs_service:
+            raise HTTPException(status_code=500, detail="Google Docs service not available")
+        
+        try:
+            # Test 1: Check Shared Drive access
+            shared_drive_id = body.get("shared_drive_id", "0AC3eBtdW1kwVUk9PVA")
+            template_doc_id = body.get("template_doc_id", "1hhBU5pwfPGiuE0X5fokhhkmLBF1Lwz7_j2aRKPzWrQU")
+            
+            # Get Shared Drive info
+            drive_info = google_docs_service.drive_service.drives().get(
+                driveId=shared_drive_id
+            ).execute()
+            
+            # Test 2: Check template document access
+            template_info = google_docs_service.drive_service.files().get(
+                fileId=template_doc_id,
+                fields='id,name,permissions,owners',
+                supportsAllDrives=True
+            ).execute()
+            
+            # Test 3: Get service account info
+            about = google_docs_service.drive_service.about().get(fields="user").execute()
+            service_account = about.get('user', {})
+            
+            return {
+                "status": "success",
+                "shared_drive_id": shared_drive_id,
+                "shared_drive_name": drive_info.get('name'),
+                "template_access": "accessible",
+                "template_name": template_info.get('name'),
+                "service_account": service_account.get('emailAddress'),
+                "permissions": len(template_info.get('permissions', [])),
+                "message": "Shared Drive and template document are accessible"
+            }
+            
+        except Exception as e:
+            logger.error(f"Shared Drive access test failed: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to access Shared Drive or template document"
+            }
+        
+    except Exception as e:
+        logger.error(f"Shared Drive access test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/")
 async def root():
     """
