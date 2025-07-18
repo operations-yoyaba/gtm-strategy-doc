@@ -360,6 +360,47 @@ async def test_google_drive(request: Request):
         logger.error(f"Google Drive test failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/test-template-access")
+async def test_template_access(request: Request):
+    """
+    Test access to the template document
+    """
+    try:
+        body = await request.json()
+        logger.info("Testing template document access")
+        
+        if not google_docs_service:
+            raise HTTPException(status_code=500, detail="Google Docs service not available")
+        
+        # Try to get template document info
+        try:
+            template_info = google_docs_service.drive_service.files().get(
+                fileId=google_docs_service.template_doc_id,
+                fields='id,name,permissions,owners'
+            ).execute()
+            
+            return {
+                "status": "success",
+                "template_id": template_info.get('id'),
+                "template_name": template_info.get('name'),
+                "access_status": "accessible",
+                "owners": [owner.get('emailAddress') for owner in template_info.get('owners', [])],
+                "permissions": len(template_info.get('permissions', []))
+            }
+            
+        except Exception as e:
+            logger.error(f"Template access failed: {str(e)}")
+            return {
+                "status": "error",
+                "template_id": google_docs_service.template_doc_id,
+                "error": str(e),
+                "access_status": "not_accessible"
+            }
+        
+    except Exception as e:
+        logger.error(f"Template access test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/")
 async def root():
     """
