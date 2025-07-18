@@ -10,4 +10,5 @@ hubspot-api-client>=9.0.0
 python-dotenv>=1.0.0
 deepdiff>=6.7.1
 httpx>=0.25.2
-tiktoken>=0.5.2 
+tiktoken>=0.5.2
+pytest>=7.0.0 
