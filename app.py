@@ -401,6 +401,53 @@ async def test_template_access(request: Request):
         logger.error(f"Template access test failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/test-create-direct")
+async def test_create_direct(request: Request):
+    """
+    Test creating a document directly without copying template
+    """
+    try:
+        body = await request.json()
+        logger.info("Testing direct document creation")
+        
+        if not google_docs_service:
+            raise HTTPException(status_code=500, detail="Google Docs service not available")
+        
+        # Create document directly without copying template
+        try:
+            # Create a new document directly
+            doc_metadata = {
+                'name': 'Test Document Created Directly',
+                'mimeType': 'application/vnd.google-apps.document'
+            }
+            
+            doc = google_docs_service.drive_service.files().create(
+                body=doc_metadata,
+                fields='id,name'
+            ).execute()
+            
+            doc_id = doc['id']
+            doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
+            
+            return {
+                "status": "success",
+                "doc_url": doc_url,
+                "doc_id": doc_id,
+                "message": "Document created directly without template"
+            }
+            
+        except Exception as e:
+            logger.error(f"Direct document creation failed: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": "Failed to create document directly"
+            }
+        
+    except Exception as e:
+        logger.error(f"Direct document creation test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/")
 async def root():
     """
