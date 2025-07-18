@@ -156,7 +156,6 @@ class GoogleDocsService:
             query = f"name='{folder_name}' and '{self.root_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'"
             results = self.drive_service.files().list(
                 q=query,
-                spaces='drive',
                 fields='files(id, name)'
             ).execute()
             
