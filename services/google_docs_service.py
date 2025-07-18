@@ -51,7 +51,7 @@ class GoogleDocsService:
             'https://www.googleapis.com/auth/documents'
         ]
         
-        # Method 1: Try default credentials (Cloud Run)
+        # Method 1: Try default credentials (Cloud Run) - like working code
         try:
             from google.auth import default
             credentials, project = default(scopes=scopes)
@@ -126,42 +126,8 @@ class GoogleDocsService:
             # Step 1: Get or create client folder
             client_folder_id = await self._get_or_create_client_folder(company_id, company_domain)
             
-            # Step 2: Copy template to new document in client folder
-            try:
-                doc_id = await self._copy_template(client_folder_id, company_id, company_domain)
-            except HttpError as e:
-                if "storageQuotaExceeded" in str(e):
-                    logger.warning(f"Template copy failed due to quota, creating empty document instead: {e}")
-                    # Fallback: Create empty document in Shared Drive
-                    doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
-                    doc_metadata = {
-                        'name': doc_name,
-                        'mimeType': 'application/vnd.google-apps.document',
-                        'parents': [client_folder_id]
-                    }
-                    
-                    doc = self.drive_service.files().create(
-                        body=doc_metadata,
-                        fields='id',
-                        supportsAllDrives=True
-                    ).execute()
-                    
-                    doc_id = doc['id']
-                    
-                    # Share document with operations@yoyaba.com
-                    self.drive_service.permissions().create(
-                        fileId=doc_id,
-                        body={
-                            'type': 'user',
-                            'role': 'writer',
-                            'emailAddress': self.operations_email
-                        },
-                        supportsAllDrives=True
-                    ).execute()
-                    
-                    logger.info(f"Created empty document as fallback: {doc_name} (ID: {doc_id})")
-                else:
-                    raise
+            # Step 2: Create new document in client folder
+            doc_id = await self._copy_template(client_folder_id, company_id, company_domain)
             
             # Step 3: Replace all placeholders with content
             revision_id = await self._replace_content(doc_id, research_result)
@@ -237,24 +203,26 @@ class GoogleDocsService:
             raise
 
     async def _copy_template(self, client_folder_id: str, company_id: str, company_domain: str) -> str:
-        """Copy the template document to create a new document in client folder"""
+        """Create a new document in client folder (like working code approach)"""
         try:
             # Create document name
             doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
             
-            # Copy the template to Shared Drive
-            copied_file = self.drive_service.files().copy(
-                fileId=self.template_doc_id,
-                body={
-                    'name': doc_name,
-                    'parents': [client_folder_id]
-                },
-                supportsAllDrives=True,
-                includeItemsFromAllDrives=True
+            # Create document directly in Shared Drive (like working code)
+            file_metadata = {
+                'name': doc_name,
+                'mimeType': 'application/vnd.google-apps.document',
+                'parents': [client_folder_id]
+            }
+            
+            doc = self.drive_service.files().create(
+                body=file_metadata,
+                fields='id',
+                supportsAllDrives=True
             ).execute()
             
-            doc_id = copied_file['id']
-            logger.info(f"Successfully copied template to create document in Shared Drive: {doc_name} (ID: {doc_id})")
+            doc_id = doc['id']
+            logger.info(f"Successfully created document in Shared Drive: {doc_name} (ID: {doc_id})")
             
             # Share document with operations@yoyaba.com
             self.drive_service.permissions().create(
@@ -275,7 +243,7 @@ class GoogleDocsService:
                 logger.error("Google Drive API rate limit exceeded")
                 raise Exception("Rate limit exceeded. Please try again later.")
             else:
-                logger.error(f"Failed to copy template: {e}")
+                logger.error(f"Failed to create document: {e}")
                 raise
 
     async def _replace_content(self, doc_id: str, research_result: Dict[str, str]) -> str:
