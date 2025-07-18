@@ -20,36 +20,81 @@ class GoogleDocsService:
         
         self.docs_service = build('docs', 'v1', credentials=credentials)
         self.drive_service = build('drive', 'v3', credentials=credentials)
+        
+        # Test the credentials by making a simple API call (like working script)
+        try:
+            about = self.drive_service.about().get(fields="user").execute()
+            user = about.get('user', {})
+            logger.info(f"👤 Authenticated as: {user.get('displayName', 'N/A')} ({user.get('emailAddress', 'N/A')})")
+        except Exception as e:
+            logger.warning(f"Could not verify authentication: {e}")
+            raise Exception(f"Authentication verification failed: {e}")
 
     def _get_credentials(self):
-        """Get Google credentials from Secret Manager or local file"""
+        """Get Google credentials with multiple fallback methods like the working script"""
+        scopes = [
+            'https://www.googleapis.com/auth/drive',
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/documents'
+        ]
+        
+        # Method 1: Try default credentials (Cloud Run)
         try:
-            # Try to get credentials from Secret Manager first
+            from google.auth import default
+            credentials, project = default(scopes=scopes)
+            if credentials and not credentials.expired:
+                logger.info(f"✅ Authentication successful with default credentials (project: {project})")
+                return credentials
+        except Exception as e:
+            logger.warning(f"Default credentials failed: {e}")
+        
+        # Method 2: Try service account key file (local development)
+        if os.path.exists('service-account-key.json'):
+            try:
+                from google.oauth2 import service_account
+                credentials = service_account.Credentials.from_service_account_file(
+                    'service-account-key.json', 
+                    scopes=scopes
+                )
+                if credentials and not credentials.expired:
+                    logger.info("✅ Authentication successful with service account key file")
+                    return credentials
+            except Exception as e:
+                logger.warning(f"Service account key failed: {e}")
+        
+        # Method 3: Try Secret Manager
+        try:
             import google.cloud.secretmanager as secretmanager
-            
             client = secretmanager.SecretManagerServiceClient()
             name = f"projects/yoyaba-db/secrets/google-service-account-key/versions/latest"
             response = client.access_secret_version(request={"name": name})
             service_account_info = json.loads(response.payload.data.decode("UTF-8"))
             
-            return service_account.Credentials.from_service_account_info(
+            credentials = service_account.Credentials.from_service_account_info(
                 service_account_info,
-                scopes=[
-                    'https://www.googleapis.com/auth/documents',
-                    'https://www.googleapis.com/auth/drive'
-                ]
+                scopes=scopes
             )
+            if credentials and not credentials.expired:
+                logger.info("✅ Authentication successful with Secret Manager")
+                return credentials
         except Exception as e:
-            logger.warning(f"Failed to get credentials from Secret Manager: {e}")
-            # Fallback to local file
-            credentials = service_account.Credentials.from_service_account_file(
-                os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-                scopes=[
-                    'https://www.googleapis.com/auth/documents',
-                    'https://www.googleapis.com/auth/drive'
-                ]
-            )
-            return credentials
+            logger.warning(f"Secret Manager failed: {e}")
+        
+        # Method 4: Try environment variable path
+        if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+            try:
+                from google.oauth2 import service_account
+                credentials = service_account.Credentials.from_service_account_file(
+                    os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+                    scopes=scopes
+                )
+                if credentials and not credentials.expired:
+                    logger.info("✅ Authentication successful with GOOGLE_APPLICATION_CREDENTIALS")
+                    return credentials
+            except Exception as e:
+                logger.warning(f"GOOGLE_APPLICATION_CREDENTIALS failed: {e}")
+        
+        raise Exception("All authentication methods failed. Check service account setup and permissions.")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def create_doc_from_template(self, research_result: Dict[str, str], gtm_context: Dict[str, Any] = None, 
@@ -95,9 +140,16 @@ class GoogleDocsService:
             # Create folder name
             folder_name = f"{company_id}-{company_domain}"
             
-            # Check if folder already exists
+            # Check if folder already exists (with Shared Drive support)
             query = f"name='{folder_name}' and '{self.root_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'"
-            results = self.drive_service.files().list(q=query).execute()
+            results = self.drive_service.files().list(
+                q=query,
+                spaces='drive',
+                fields='files(id, name)',
+                corpora='drive',
+                includeItemsFromAllDrives=True,
+                supportsAllDrives=True
+            ).execute()
             
             if results.get('files'):
                 # Folder exists, return its ID
@@ -114,7 +166,8 @@ class GoogleDocsService:
                 
                 folder = self.drive_service.files().create(
                     body=folder_metadata,
-                    fields='id'
+                    fields='id',
+                    supportsAllDrives=True
                 ).execute()
                 
                 folder_id = folder['id']
@@ -142,13 +195,14 @@ class GoogleDocsService:
             # Create document name
             doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
             
-            # Copy the template
+            # Copy the template (with Shared Drive support)
             copied_file = self.drive_service.files().copy(
                 fileId=self.template_doc_id,
                 body={
                     'name': doc_name,
                     'parents': [client_folder_id]
-                }
+                },
+                supportsAllDrives=True
             ).execute()
             
             doc_id = copied_file['id']
