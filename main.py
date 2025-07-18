@@ -90,6 +90,7 @@ async def generate_gtm_doc(request: GenerateRequest, background_tasks: Backgroun
             "response_id": response_id,
             "company_name": request.company.get('name', 'Unknown'),
             "company_id": request.companyId,
+            "company_domain": request.company.get('domain', 'unknown'),
             "input_tokens": input_tokens,
             "raw_data": raw_data,
             "submitted_at": datetime.utcnow().isoformat(),

@@ -134,9 +134,15 @@ async def process_completed_response(response_id: str):
         # Create Google Doc
         logger.info(f"Creating Google Doc for {response_id}")
         if google_docs_service:
+            # Extract company information for folder and document naming
+            company_id = job_data.get("company_id", "unknown")
+            company_domain = job_data.get("company_domain", "unknown")
+            
             doc_url, revision_id = await google_docs_service.create_doc_from_template(
                 research_result,
-                job_data["raw_data"]
+                job_data["raw_data"],
+                company_id=company_id,
+                company_domain=company_domain
             )
             logger.info(f"Successfully created Google Doc: {doc_url}")
         else:
@@ -205,6 +211,7 @@ async def submit_deep_research_job(request: GenerateRequest):
         job_tracker[response_id] = {
             "company_name": request.company.name,
             "company_id": request.companyId,
+            "company_domain": request.company.domain,
             "input_tokens": input_tokens,
             "raw_data": raw_data,
             "submitted_at": datetime.utcnow().isoformat(),

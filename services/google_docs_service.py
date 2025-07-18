@@ -1,7 +1,7 @@
 import os
 import logging
 import json
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 class GoogleDocsService:
     def __init__(self):
         self.template_doc_id = os.getenv("GS_TEMPLATE_DOC_ID")
-        self.folder_id = os.getenv("GS_DRIVE_FOLDER_ID")
+        self.root_folder_id = os.getenv("GS_DRIVE_FOLDER_ID")  # Root folder for all GTM docs
+        self.operations_email = "operations@yoyaba.com"
         
         # Initialize Google Docs API client
         credentials = service_account.Credentials.from_service_account_file(
@@ -27,24 +28,34 @@ class GoogleDocsService:
         self.drive_service = build('drive', 'v3', credentials=credentials)
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-    async def create_doc_from_template(self, research_result: Dict[str, str], gtm_context: Dict[str, Any] = None) -> Tuple[str, str]:
+    async def create_doc_from_template(self, research_result: Dict[str, str], gtm_context: Dict[str, Any] = None, 
+                                     company_id: str = None, company_domain: str = None) -> Tuple[str, str]:
         """
         Create a new Google Doc from template and populate with research results
         
+        Args:
+            research_result: The research content to populate the document
+            gtm_context: The GTM context data
+            company_id: HubSpot company ID
+            company_domain: Company domain from HubSpot
+            
         Returns: (doc_url, revision_id)
         """
         try:
-            # Step 1: Copy template to new document
-            doc_id = await self._copy_template()
+            # Step 1: Get or create client folder
+            client_folder_id = await self._get_or_create_client_folder(company_id, company_domain)
             
-            # Step 2: Replace all placeholders with content
+            # Step 2: Copy template to new document in client folder
+            doc_id = await self._copy_template(client_folder_id, company_id, company_domain)
+            
+            # Step 3: Replace all placeholders with content
             revision_id = await self._replace_content(doc_id, research_result)
             
-            # Step 3: Store JSON file for subsequent iterations
+            # Step 4: Store JSON file for subsequent iterations
             if gtm_context:
-                await self._store_json_file(doc_id, research_result, gtm_context)
+                await self._store_json_file(doc_id, research_result, gtm_context, client_folder_id)
             
-            # Step 4: Generate shareable URL
+            # Step 5: Generate shareable URL
             doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
             
             logger.info(f"Created Google Doc: {doc_url}")
@@ -54,19 +65,82 @@ class GoogleDocsService:
             logger.error(f"Failed to create Google Doc: {str(e)}")
             raise
 
-    async def _copy_template(self) -> str:
-        """Copy the template document to create a new document"""
+    async def _get_or_create_client_folder(self, company_id: str, company_domain: str) -> str:
+        """Get or create a folder for the specific client"""
         try:
+            # Create folder name
+            folder_name = f"{company_id}-{company_domain}"
+            
+            # Check if folder already exists
+            query = f"name='{folder_name}' and '{self.root_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'"
+            results = self.drive_service.files().list(q=query).execute()
+            
+            if results.get('files'):
+                # Folder exists, return its ID
+                folder_id = results['files'][0]['id']
+                logger.info(f"Found existing client folder: {folder_name}")
+                return folder_id
+            else:
+                # Create new folder
+                folder_metadata = {
+                    'name': folder_name,
+                    'mimeType': 'application/vnd.google-apps.folder',
+                    'parents': [self.root_folder_id]
+                }
+                
+                folder = self.drive_service.files().create(
+                    body=folder_metadata,
+                    fields='id'
+                ).execute()
+                
+                folder_id = folder['id']
+                
+                # Share folder with operations@yoyaba.com
+                self.drive_service.permissions().create(
+                    fileId=folder_id,
+                    body={
+                        'type': 'user',
+                        'role': 'writer',
+                        'emailAddress': self.operations_email
+                    }
+                ).execute()
+                
+                logger.info(f"Created new client folder: {folder_name} (ID: {folder_id})")
+                return folder_id
+                
+        except HttpError as e:
+            logger.error(f"Failed to get/create client folder: {e}")
+            raise
+
+    async def _copy_template(self, client_folder_id: str, company_id: str, company_domain: str) -> str:
+        """Copy the template document to create a new document in client folder"""
+        try:
+            # Create document name
+            doc_name = f"{company_id}-{company_domain} - GTM Strategy Doc"
+            
             # Copy the template
             copied_file = self.drive_service.files().copy(
                 fileId=self.template_doc_id,
                 body={
-                    'name': f'GTM Strategy - {self._generate_timestamp()}',
-                    'parents': [self.folder_id] if self.folder_id else None
+                    'name': doc_name,
+                    'parents': [client_folder_id]
                 }
             ).execute()
             
-            return copied_file['id']
+            doc_id = copied_file['id']
+            
+            # Share document with operations@yoyaba.com
+            self.drive_service.permissions().create(
+                fileId=doc_id,
+                body={
+                    'type': 'user',
+                    'role': 'writer',
+                    'emailAddress': self.operations_email
+                }
+            ).execute()
+            
+            logger.info(f"Created document: {doc_name} (ID: {doc_id})")
+            return doc_id
             
         except HttpError as e:
             if e.resp.status == 429:
@@ -132,7 +206,7 @@ class GoogleDocsService:
                 logger.error(f"Failed to replace content: {e}")
                 raise
 
-    async def _store_json_file(self, doc_id: str, research_result: Dict[str, str], gtm_context: Dict[str, Any]) -> None:
+    async def _store_json_file(self, doc_id: str, research_result: Dict[str, str], gtm_context: Dict[str, Any], client_folder_id: str) -> None:
         """Store JSON file for subsequent iterations"""
         try:
             # Create JSON content with metadata
@@ -147,7 +221,7 @@ class GoogleDocsService:
             # Create JSON file in the same folder
             file_metadata = {
                 'name': f'{doc_id}-json.json',
-                'parents': [self.folder_id] if self.folder_id else None,
+                'parents': [client_folder_id],
                 'mimeType': 'application/json'
             }
             
@@ -163,11 +237,16 @@ class GoogleDocsService:
             logger.error(f"Failed to store JSON file: {str(e)}")
             # Don't raise - this is not critical for the main flow
 
-    async def get_stored_json(self, doc_id: str) -> Dict[str, Any]:
+    async def get_stored_json(self, doc_id: str, client_folder_id: str = None) -> Dict[str, Any]:
         """Retrieve stored JSON for a document"""
         try:
-            # Search for the JSON file
-            query = f"name='{doc_id}-json.json' and '{self.folder_id}' in parents"
+            # Search for the JSON file in the specific client folder if provided
+            if client_folder_id:
+                query = f"name='{doc_id}-json.json' and '{client_folder_id}' in parents"
+            else:
+                # Fallback to searching in root folder
+                query = f"name='{doc_id}-json.json' and '{self.root_folder_id}' in parents"
+            
             results = self.drive_service.files().list(q=query).execute()
             
             if results.get('files'):
@@ -182,11 +261,11 @@ class GoogleDocsService:
             logger.error(f"Failed to retrieve stored JSON: {str(e)}")
             return None
 
-    async def update_stored_json(self, doc_id: str, new_research_result: Dict[str, str], gtm_context: Dict[str, Any]) -> None:
+    async def update_stored_json(self, doc_id: str, new_research_result: Dict[str, str], gtm_context: Dict[str, Any], client_folder_id: str = None) -> None:
         """Update stored JSON with new research result"""
         try:
             # Get existing JSON
-            existing_json = await self.get_stored_json(doc_id)
+            existing_json = await self.get_stored_json(doc_id, client_folder_id)
             
             if existing_json:
                 # Update version and research result
@@ -196,7 +275,11 @@ class GoogleDocsService:
                 existing_json["updated_at"] = self._generate_timestamp()
                 
                 # Find the file and update it
-                query = f"name='{doc_id}-json.json' and '{self.folder_id}' in parents"
+                if client_folder_id:
+                    query = f"name='{doc_id}-json.json' and '{client_folder_id}' in parents"
+                else:
+                    query = f"name='{doc_id}-json.json' and '{self.root_folder_id}' in parents"
+                
                 results = self.drive_service.files().list(q=query).execute()
                 
                 if results.get('files'):
@@ -209,7 +292,10 @@ class GoogleDocsService:
                     logger.info(f"Updated JSON file for doc {doc_id}")
             else:
                 # Create new JSON file if it doesn't exist
-                await self._store_json_file(doc_id, new_research_result, gtm_context)
+                if client_folder_id:
+                    await self._store_json_file(doc_id, new_research_result, gtm_context, client_folder_id)
+                else:
+                    logger.warning(f"JSON file for doc {doc_id} not found and no client_folder_id provided. Cannot update.")
                 
         except Exception as e:
             logger.error(f"Failed to update stored JSON: {str(e)}")
