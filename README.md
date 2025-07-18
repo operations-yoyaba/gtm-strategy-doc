@@ -1,6 +1,15 @@
 # GTM Strategy Document Generator
 
-An automated system that generates comprehensive go-to-market strategy documents when a HubSpot deal reaches the "Meeting Booked" stage. The system enriches company data, runs deep research using OpenAI's "o3-deep-research" model, and creates fully formatted Google Docs with inline citations.
+Automated GTM strategy document generation system triggered by HubSpot deal stage changes.
+
+## Features
+
+- **HubSpot Integration**: Monitors deal stage changes and triggers document generation
+- **Clay Data Enrichment**: Enhances company data with additional insights
+- **OpenAI Deep Research**: Uses advanced AI models to analyze and generate comprehensive GTM strategies
+- **Google Docs Integration**: Creates professional documents with inline citations
+- **Webhook Architecture**: Asynchronous processing with background job handling
+- **Cloud Deployment**: Deployed on Google Cloud Run with Secret Manager integration
 
 ## Architecture Overview
 
