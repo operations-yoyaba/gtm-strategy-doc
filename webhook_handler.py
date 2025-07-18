@@ -135,8 +135,15 @@ async def process_completed_response(response_id: str):
         logger.info(f"Creating Google Doc for {response_id}")
         if google_docs_service:
             # Extract company information for folder and document naming
-            company_id = job_data.get("company_id", "unknown")
+            company_id = str(job_data.get("company_id", "unknown"))
             company_domain = job_data.get("company_domain", "unknown")
+            
+            # Ensure we have valid values for folder/document naming
+            if company_id == "unknown" or company_domain == "unknown":
+                logger.warning(f"Missing company info for {response_id}: id={company_id}, domain={company_domain}")
+                # Use a fallback naming scheme
+                company_id = f"company_{response_id[:8]}"
+                company_domain = "unknown.com"
             
             doc_url, revision_id = await google_docs_service.create_doc_from_template(
                 research_result,
@@ -209,9 +216,9 @@ async def submit_deep_research_job(request: GenerateRequest):
         
         # Store job metadata for later correlation
         job_tracker[response_id] = {
-            "company_name": request.company.name,
+            "company_name": request.company.get("name", "Unknown Company"),
             "company_id": request.companyId,
-            "company_domain": request.company.domain,
+            "company_domain": request.company.get("domain", "unknown.com"),
             "input_tokens": input_tokens,
             "raw_data": raw_data,
             "submitted_at": datetime.utcnow().isoformat(),

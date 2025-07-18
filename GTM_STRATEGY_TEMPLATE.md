@@ -1,185 +1,185 @@
-# {{DOC_TITLE}}
+    # {{DOC_TITLE}}
 
-*Generated on {{TIMESTAMP}}*
+    *Generated on {{TIMESTAMP}}*
 
----
+    ---
 
-## Executive Summary
+    ## Executive Summary
 
-{{INTRO}}
+    {{INTRO}}
 
----
+    ---
 
-## 1. Pricing & Packaging Strategy
+    ## 1. Pricing & Packaging Strategy
 
-{{PRICING_PACKAGING}}
+    {{PRICING_PACKAGING}}
 
-### Revenue Model Overview:
-- **Pricing Structure**: [AI-generated analysis]
-- **Packaging Approach**: [AI-generated analysis]
-- **Value Proposition**: [AI-generated analysis]
+    ### Revenue Model Overview:
+    - **Pricing Structure**: [AI-generated analysis]
+    - **Packaging Approach**: [AI-generated analysis]
+    - **Value Proposition**: [AI-generated analysis]
 
----
+    ---
 
-## 2. Go-to-Market Motion
+    ## 2. Go-to-Market Motion
 
-{{GTM_MOTION}}
+    {{GTM_MOTION}}
 
-### Sales Motion & Channels:
-- **Primary GTM Motion**: [AI-generated analysis]
-- **Secondary Motion**: [AI-generated analysis]
-- **Channel Strategy**: [AI-generated analysis]
+    ### Sales Motion & Channels:
+    - **Primary GTM Motion**: [AI-generated analysis]
+    - **Secondary Motion**: [AI-generated analysis]
+    - **Channel Strategy**: [AI-generated analysis]
 
----
+    ---
 
-## 3. Customer Engagement & Ownership Model
+    ## 3. Customer Engagement & Ownership Model
 
-{{TOUCH_MODEL}}
+    {{TOUCH_MODEL}}
 
-### Touch Levels & Engagement:
-- **No-Touch Model**: [AI-generated analysis]
-- **Low-Touch Model**: [AI-generated analysis]
-- **High-Touch Model**: [AI-generated analysis]
+    ### Touch Levels & Engagement:
+    - **No-Touch Model**: [AI-generated analysis]
+    - **Low-Touch Model**: [AI-generated analysis]
+    - **High-Touch Model**: [AI-generated analysis]
 
----
+    ---
 
-## 4. Ideal Customer Profile (ICP)
+    ## 4. Ideal Customer Profile (ICP)
 
-{{ICP}}
+    {{ICP}}
 
-### Target Customer Definition:
-- **Company Size**: [AI-generated recommendation]
-- **Industry Vertical**: [AI-generated recommendation]
-- **Geographic Focus**: [AI-generated recommendation]
-- **Pain Points**: [AI-generated recommendation]
+    ### Target Customer Definition:
+    - **Company Size**: [AI-generated recommendation]
+    - **Industry Vertical**: [AI-generated recommendation]
+    - **Geographic Focus**: [AI-generated recommendation]
+    - **Pain Points**: [AI-generated recommendation]
 
----
+    ---
 
-## 5. Growth & Attainment Metrics
+    ## 5. Growth & Attainment Metrics
 
-{{METRICS}}
+    {{METRICS}}
 
-### Key Performance Indicators:
-| Metric | Current Status | Growth Target |
-|--------|---------------|---------------|
-| [AI-generated] | [AI-generated] | [AI-generated] |
-| [AI-generated] | [AI-generated] | [AI-generated] |
-| [AI-generated] | [AI-generated] | [AI-generated] |
+    ### Key Performance Indicators:
+    | Metric | Current Status | Growth Target |
+    |--------|---------------|---------------|
+    | [AI-generated] | [AI-generated] | [AI-generated] |
+    | [AI-generated] | [AI-generated] | [AI-generated] |
+    | [AI-generated] | [AI-generated] | [AI-generated] |
 
----
+    ---
 
-## 6. Financial Metrics & Performance
+    ## 6. Financial Metrics & Performance
 
-{{FINANCIALS}}
+    {{FINANCIALS}}
 
-### Financial Analysis:
-- **Revenue Model**: [AI-generated analysis]
-- **Growth Projections**: [AI-generated analysis]
-- **Unit Economics**: [AI-generated analysis]
+    ### Financial Analysis:
+    - **Revenue Model**: [AI-generated analysis]
+    - **Growth Projections**: [AI-generated analysis]
+    - **Unit Economics**: [AI-generated analysis]
 
----
+    ---
 
-## 7. Financing & Capital Structure
+    ## 7. Financing & Capital Structure
 
-{{FINANCING}}
+    {{FINANCING}}
 
-### Funding Strategy:
-- **Current Stage**: [AI-generated analysis]
-- **Funding History**: [AI-generated analysis]
-- **Capital Structure**: [AI-generated analysis]
+    ### Funding Strategy:
+    - **Current Stage**: [AI-generated analysis]
+    - **Funding History**: [AI-generated analysis]
+    - **Capital Structure**: [AI-generated analysis]
 
----
+    ---
 
-## 8. Market Maturity & Strategic Position
+    ## 8. Market Maturity & Strategic Position
 
-{{MARKET_MATURITY}}
+    {{MARKET_MATURITY}}
 
-### Market Analysis:
-- **Market Stage**: [AI-generated analysis]
-- **Competitive Landscape**: [AI-generated analysis]
-- **Strategic Position**: [AI-generated analysis]
+    ### Market Analysis:
+    - **Market Stage**: [AI-generated analysis]
+    - **Competitive Landscape**: [AI-generated analysis]
+    - **Strategic Position**: [AI-generated analysis]
 
----
+    ---
 
-## 9. Key Stakeholders & Leadership
+    ## 9. Key Stakeholders & Leadership
 
-{{STAKEHOLDERS}}
+    {{STAKEHOLDERS}}
 
-### Leadership & Stakeholders:
-- **Executive Team**: [AI-generated analysis]
-- **Board Members**: [AI-generated analysis]
-- **Key Investors**: [AI-generated analysis]
+    ### Leadership & Stakeholders:
+    - **Executive Team**: [AI-generated analysis]
+    - **Board Members**: [AI-generated analysis]
+    - **Key Investors**: [AI-generated analysis]
 
----
+    ---
 
-## 10. Implementation Roadmap
+    ## 10. Implementation Roadmap
 
-### Phase 1: Foundation (Months 1-3)
-- [AI-generated recommendation]
-- [AI-generated recommendation]
-- [AI-generated recommendation]
+    ### Phase 1: Foundation (Months 1-3)
+    - [AI-generated recommendation]
+    - [AI-generated recommendation]
+    - [AI-generated recommendation]
 
-### Phase 2: Execution (Months 4-6)
-- [AI-generated recommendation]
-- [AI-generated recommendation]
-- [AI-generated recommendation]
+    ### Phase 2: Execution (Months 4-6)
+    - [AI-generated recommendation]
+    - [AI-generated recommendation]
+    - [AI-generated recommendation]
 
-### Phase 3: Scale (Months 7-12)
-- [AI-generated recommendation]
-- [AI-generated recommendation]
-- [AI-generated recommendation]
+    ### Phase 3: Scale (Months 7-12)
+    - [AI-generated recommendation]
+    - [AI-generated recommendation]
+    - [AI-generated recommendation]
 
----
+    ---
 
-## 11. Risk Assessment & Mitigation
+    ## 11. Risk Assessment & Mitigation
 
-### Key Risks:
-1. **Market Risk**: [AI-generated assessment]
-2. **Execution Risk**: [AI-generated assessment]
-3. **Competitive Risk**: [AI-generated assessment]
+    ### Key Risks:
+    1. **Market Risk**: [AI-generated assessment]
+    2. **Execution Risk**: [AI-generated assessment]
+    3. **Competitive Risk**: [AI-generated assessment]
 
-### Mitigation Strategies:
-- [AI-generated strategy]
-- [AI-generated strategy]
-- [AI-generated strategy]
+    ### Mitigation Strategies:
+    - [AI-generated strategy]
+    - [AI-generated strategy]
+    - [AI-generated strategy]
 
----
+    ---
 
-## 12. Success Criteria & Measurement
+    ## 12. Success Criteria & Measurement
 
-### Success Metrics:
-{{SUMMARY_TABLE}}
+    ### Success Metrics:
+    {{SUMMARY_TABLE}}
 
-### Quarterly Review Points:
-- **Q1**: [AI-generated milestone]
-- **Q2**: [AI-generated milestone]
-- **Q3**: [AI-generated milestone]
-- **Q4**: [AI-generated milestone]
+    ### Quarterly Review Points:
+    - **Q1**: [AI-generated milestone]
+    - **Q2**: [AI-generated milestone]
+    - **Q3**: [AI-generated milestone]
+    - **Q4**: [AI-generated milestone]
 
----
+    ---
 
-## Appendix A: Market Research Sources
+    ## Appendix A: Market Research Sources
 
-*This document was generated using comprehensive market research, competitive analysis, and industry best practices. Sources include:*
+    *This document was generated using comprehensive market research, competitive analysis, and industry best practices. Sources include:*
 
-- [AI-generated sources]
-- [AI-generated sources]
-- [AI-generated sources]
+    - [AI-generated sources]
+    - [AI-generated sources]
+    - [AI-generated sources]
 
----
+    ---
 
-## Appendix B: Methodology
+    ## Appendix B: Methodology
 
-*This GTM strategy was developed using:*
+    *This GTM strategy was developed using:*
 
-1. **Deep Market Research**: Comprehensive analysis of market dynamics, competitive landscape, and industry trends
-2. **Customer Intelligence**: Analysis of target customer segments, pain points, and buying behavior
-3. **Financial Modeling**: Revenue projections, unit economics, and growth trajectory analysis
-4. **Best Practices**: Integration of proven GTM frameworks and methodologies
-5. **AI-Powered Insights**: Advanced analysis using OpenAI's deep research capabilities
+    1. **Deep Market Research**: Comprehensive analysis of market dynamics, competitive landscape, and industry trends
+    2. **Customer Intelligence**: Analysis of target customer segments, pain points, and buying behavior
+    3. **Financial Modeling**: Revenue projections, unit economics, and growth trajectory analysis
+    4. **Best Practices**: Integration of proven GTM frameworks and methodologies
+    5. **AI-Powered Insights**: Advanced analysis using OpenAI's deep research capabilities
 
----
+    ---
 
-*Document generated by GTM Strategy Document Generator v1.0*
+    *Document generated by GTM Strategy Document Generator v1.0*
 
-*For questions or updates, contact: operations@yoyaba.com* 
+    *For questions or updates, contact: operations@yoyaba.com* 
